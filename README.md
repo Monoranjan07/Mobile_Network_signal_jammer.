@@ -344,4 +344,27 @@ This project is intended for educational and research purposes only.
 Unauthorized signal jamming is illegal, dangerous, and unethical.
 
 ---
-  
+
+
+## 💨🐎 Quick summary of the run you just saw
+
+Jammer type: tone (narrowband tone at an offset).
+
+Jammer power: –5 dB relative to the signal.
+
+AWGN SNR: 20 dB.
+
+Output: BER ≈ 0.494 (about 49.4% bit errors over ~9,992 bits).
+
+That BER is very high — essentially the link is almost unusable (close to random guessing). The tone jammer overwhelmed the receiver’s ability to correctly decide symbols despite relatively high AWGN SNR.
+
+
+<img width="1735" height="1101" alt="image" src="https://github.com/user-attachments/assets/c1c1b572-7a06-4c94-810b-b379a294a2d9" />
+<img width="1973" height="793" alt="image" src="https://github.com/user-attachments/assets/68610218-a75f-4144-b512-9319abfcfeb1" />
+<img width="1725" height="793" alt="image" src="https://github.com/user-attachments/assets/eb682cde-5542-42e5-9699-ff16fec97e08" />
+
+---
+
+
+
+

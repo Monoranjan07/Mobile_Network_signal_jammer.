@@ -117,6 +117,8 @@ csharp
 ---
 
   # (inside code):
+
+# ⚠️ Note:- My dear friend, use your brain a little again, because here are 3 Python codes, understand them well and implement them 🤯
   ```
 """
 simulated_interference_analysis.py

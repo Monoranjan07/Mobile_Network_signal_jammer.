@@ -119,166 +119,171 @@ csharp
   # (inside code):
 
 # ⚠️ Note:- My dear friend, use your brain a little again, because here are 3 Python codes, understand them well and implement them 🤯
-  ---
-# 1. Receive-only SoapySDR capture (safe)
-
-  * This captures IQ samples from the first available SDR device and writes them to a file. No transmit.
-Requirements: SoapySDR, numpy.
-
-```
-# soapy_receive_capture.py
-# Receive-only IQ capture (safe, does not transmit)
-# Requirements: SoapySDR, numpy
-import SoapySDR
-from SoapySDR import *  # SOAPY_SDR_ constants
-import numpy as np
-import sys
-import time
-
-CENTER_FREQ = 900e6    # change to a frequency you are permitted to observe
-SAMPLE_RATE = 1e6      # 1 MS/s
-GAIN = 30
-DURATION_SEC = 5      # seconds to capture
-OUTFILE = "iq_capture.bin"  # raw complex64 interleaved (I,Q)
-
-def main():
-    devices = SoapySDR.Device.enumerate()
-    if not devices:
-        print("No SDR devices found. Connect an SDR and try again.")
-        return
-
-    dev = SoapySDR.Device(devices[0])
-    rx_chan = 0
-
-    dev.setSampleRate(SOAPY_SDR_RX, rx_chan, SAMPLE_RATE)
-    dev.setFrequency(SOAPY_SDR_RX, rx_chan, CENTER_FREQ)
-    dev.setGain(SOAPY_SDR_RX, rx_chan, GAIN)
-
-    rx_stream = dev.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, [rx_chan])
-    dev.activateStream(rx_stream)
-
-    total_samples = int(SAMPLE_RATE * DURATION_SEC)
-    buf_size = 4096
-    written = 0
-
-    print(f"Capturing {DURATION_SEC} s ({total_samples} samples) at {CENTER_FREQ/1e6} MHz -> {OUTFILE}")
-    with open(OUTFILE, "wb") as f:
-        while written < total_samples:
-            to_read = min(buf_size, total_samples - written)
-            buff = np.array([0j]*to_read, dtype=np.complex64)
-            sr = dev.readStream(rx_stream, [buff], to_read)
-            if sr.ret > 0:
-                # write interleaved complex64 (float32 real, float32 imag)
-                buff.tofile(f)
-                written += sr.ret
-            else:
-                print("readStream error or timeout:", sr.ret)
-                time.sleep(0.01)
-
-    dev.deactivateStream(rx_stream)
-    dev.closeStream(rx_stream)
-    print("Capture complete.")
-
-if _name_ == "_main_":
-    main()
-```
-
- * How to use: run it in a controlled environment. The file iq_capture.bin can be analyzed offline (plot spectrum, compute PSD, demodulate, etc.).
-
 ---
-
-# 2. Simulation-only: generate IQ data + add noise (no hardware)
-
-   * Generates a QPSK-like signal, applies interference/noise, and saves IQ samples. Great for studying constellation, BER, and spectrums — no RF.
-
 ```
-# simulate_iq_and_noise.py
-# Generates QPSK symbols, adds noise (simulated jammer), saves IQ samples to disk.
-# Requirements: numpy, matplotlib (optional for plotting)
+"""
+Safe OFDM + Interferer IQ Generator (No Transmission)
+Author: assistant (for Monoranjan07 project)
 
+Generates an OFDM waveform and overlays selectable interference.
+Saves interleaved complex64 IQ to 'simulated_jam_iq.bin'.
+
+Requirements:
+    pip install numpy matplotlib scipy
+
+Use: analyze offline, load into lab instrumentation, or feed to receive-only SDR capture/analyzer.
+"""
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import welch
 
-NUM_SYMBOLS = 20000
-SAMPLE_RATE = 1e6  # for reference only
-SNR_DB = 10        # signal-to-noise ratio in dB
-OUTFILE = "simulated_iq.bin"
+# -----------------------
+# Parameters
+# -----------------------
+fs = 1e6                 # sample rate (Hz) for simulation (sample-rate is for file metadata only)
+num_subcarriers = 256    # OFDM subcarriers
+cp_len = 64              # cyclic prefix length (samples)
+num_ofdm_symbols = 400   # number of OFDM symbols
+mod_order = 4            # QPSK (2 bits/symbol)
+subcarrier_spacing = fs / num_subcarriers  # Hz
+output_file = "simulated_jam_iq.bin"
 
-# QPSK mapping
-bits = np.random.randint(0, 4, NUM_SYMBOLS)
-symbols = np.exp(1j * (np.pi/2 * bits + np.pi/4))  # Gray-coded QPSK
-# Upsample / shape pulse if needed; here we use symbol-rate IQ simple model
-signal = symbols.astype(np.complex64)
+# Interferer options (choose one or combine)
+add_tone = True
+tone_freq_hz = 50e3      # tone frequency offset from center (Hz) — e.g., 50 kHz offset
+tone_amplitude_db = -3   # relative to OFDM (dB)
+tone_pulsed = True       # if True, tone pulses on/off
+tone_pulse_period = 0.02 # seconds (period of on+off)
+tone_pulse_duty = 0.5    # fraction of period tone is ON
 
-# Add Gaussian noise
-snr_linear = 10**(SNR_DB/10)
-signal_power = np.mean(np.abs(signal)**2)
-noise_power = signal_power / snr_linear
-noise = (np.random.randn(NUM_SYMBOLS) + 1j*np.random.randn(NUM_SYMBOLS)) * np.sqrt(noise_power/2)
-rx = (signal + noise).astype(np.complex64)
+add_narrowband_noise = False
+nb_noise_amplitude_db = -6  # dB
 
+add_wideband_noise = False
+wb_snr_db = 10
+
+# -----------------------
+# Helper functions
+# -----------------------
+def qpsk_mod(bits):
+    b = bits.reshape((-1,2))
+    sym = (2*b[:,0]-1) + 1j*(2*b[:,1]-1)
+    return sym / np.sqrt(2)
+
+def generate_ofdm_frame(num_subcarriers, cp_len, data_symbols):
+    # data_symbols length == num_subcarriers
+    tx_ifft = np.fft.ifft(data_symbols, n=num_subcarriers)
+    tx_with_cp = np.hstack([tx_ifft[-cp_len:], tx_ifft])
+    return tx_with_cp
+
+# -----------------------
+# Build OFDM waveform
+# -----------------------
+ofdm_time_waveform = []
+
+for _ in range(num_ofdm_symbols):
+    # random bits for each subcarrier (QPSK)
+    bits = np.random.randint(0,2, num_subcarriers*2)
+    qpsk = qpsk_mod(bits)
+    tx_sym = generate_ofdm_frame(num_subcarriers, cp_len, qpsk)
+    ofdm_time_waveform.append(tx_sym)
+
+ofdm_time = np.hstack(ofdm_time_waveform).astype(np.complex64)
+num_samples = ofdm_time.size
+duration_sec = num_samples / fs
+print(f"Generated OFDM waveform: {num_samples} samples, duration ~ {duration_sec:.3f} s")
+
+# normalize OFDM to unit RMS
+ofdm_rms = np.sqrt(np.mean(np.abs(ofdm_time)**2))
+ofdm_time = ofdm_time / ofdm_rms
+
+# -----------------------
+# Build interferer
+# -----------------------
+t = np.arange(num_samples) / fs
+interferer = np.zeros(num_samples, dtype=np.complex64)
+
+if add_tone:
+    # tone as complex baseband: exp( j*2pi*freq*t )
+    tone_freq = tone_freq_hz  # Hz offset from center
+    tone = np.exp(1j*2*np.pi*tone_freq*t)
+    # amplitude relative to OFDM RMS
+    amp_linear = 10**(tone_amplitude_db/20)
+    tone = tone * amp_linear
+
+    if tone_pulsed:
+        # create pulsing window
+        period_samples = int(tone_pulse_period * fs)
+        on_samples = int(period_samples * tone_pulse_duty)
+        window = np.zeros(num_samples)
+        for start in range(0, num_samples, period_samples):
+            window[start : start+on_samples] = 1.0
+        tone = tone * window
+
+    interferer += tone.astype(np.complex64)
+
+if add_narrowband_noise:
+    # narrowband colored noise centered at tone_freq_hz (simulate narrowband jammer)
+    # generate white noise then filter in frequency domain by Gaussian around tone_freq
+    noise = (np.random.randn(num_samples) + 1j*np.random.randn(num_samples)).astype(np.complex64)
+    # frequency-domain shaping
+    freqs = np.fft.fftfreq(num_samples, d=1/fs)
+    center = tone_freq_hz
+    sigma = 5e3  # Hz: narrowband width
+    shape = np.exp(-0.5 * ((freqs - center)/sigma)**2)
+    noise_fd = np.fft.fft(noise) * shape
+    nb_noise = np.fft.ifft(noise_fd)
+    amp = 10**(nb_noise_amplitude_db/20)
+    interferer += (nb_noise * amp).astype(np.complex64)
+
+if add_wideband_noise:
+    # wideband AWGN added to whole band to reach desired SNR vs OFDM
+    wb_noise = (np.random.randn(num_samples) + 1j*np.random.randn(num_samples)).astype(np.complex64)
+    # compute scaling for SNR
+    wb_noise = wb_noise / np.sqrt(np.mean(np.abs(wb_noise)**2))
+    amp = 10**(-wb_snr_db/20)
+    interferer += (wb_noise * amp).astype(np.complex64)
+
+# -----------------------
+# Combine and normalize
+# -----------------------
+combined = ofdm_time + interferer
+combined_rms = np.sqrt(np.mean(np.abs(combined)**2))
+combined = combined / combined_rms  # normalize to 0 dBFS reference
+
+# -----------------------
 # Save to file (interleaved float32: I,Q,I,Q,...)
-rx.tofile(OUTFILE)
-print(f"Saved simulated IQ to {OUTFILE}")
+# -----------------------
+combined.astype(np.complex64).tofile(output_file)
+print(f"Saved simulated IQ to: {output_file}")
 
-# Optional: quick plots
-plt.figure(figsize=(10,4))
-plt.subplot(1,2,1)
-plt.scatter(np.real(rx[:2000]), np.imag(rx[:2000]), s=2)
-plt.title("Constellation (subset)")
-plt.subplot(1,2,2)
-plt.psd(rx, NFFT=1024, Fs=SAMPLE_RATE/1e3) # frequency in kHz on axis
-plt.title("PSD (simulated)")
+# -----------------------
+# Quick plots for inspection
+# -----------------------
+plt.figure(figsize=(12,8))
+
+plt.subplot(3,1,1)
+plt.plot(np.real(combined[:2000]))
+plt.title("Time domain (real) - first 2000 samples")
+
+plt.subplot(3,1,2)
+# PSD via welch
+f, Pxx = welch(combined, fs=fs, nperseg=4096)
+plt.semilogy(f - fs/2, np.fft.fftshift(Pxx))
+plt.title("Power Spectral Density (shifted)")
+plt.xlabel("Frequency (Hz)")
+
+plt.subplot(3,1,3)
+# Constellation sample
+sample_for_const = combined[:num_subcarriers*4]  # choose several OFDM symbols worth
+plt.scatter(np.real(sample_for_const), np.imag(sample_for_const), s=2, alpha=0.6)
+plt.title("Constellation (subset of samples)")
+plt.xlabel("I")
+plt.ylabel("Q")
+
 plt.tight_layout()
 plt.show()
 ```
-
-* This file is safe to share in labs and to analyze in software suites.
-  ---
-
-  # 3. Local network "transmitter" (UDP) — learn streaming mechanics (safe)
-
-This sends arbitrary data over your LAN using UDP. Useful for practicing streaming, latency, packet loss, and protocols without touching RF.
-
-* * Sender (transmitter):
-```
-# udp_sender.py
-import socket
-import time
-
-DEST_IP = "127.0.0.1"   # loopback or target host on LAN
-DEST_PORT = 5005
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-message = b"Hello, this is a safe UDP transmission test."
-
-for i in range(100):
-    sock.sendto(message + f" #{i}".encode(), (DEST_IP, DEST_PORT))
-    time.sleep(0.1)
-
-print("Done sending.")
-
-```
----
-
-* * Receiver:
-```
- udp_receiver.py
-import socket
-
-LISTEN_IP = "0.0.0.0"
-LISTEN_PORT = 5005
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((LISTEN_IP, LISTEN_PORT))
-print(f"Listening on {LISTEN_IP}:{LISTEN_PORT}")
-
-while True:
-    data, addr = sock.recvfrom(4096)
-    print("Received:", data, "from", addr)
-
-```
-
 ---
 
 ## 🧪 Research Workflow

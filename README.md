@@ -63,7 +63,7 @@ It uses GNU Radio and an SDR device (e.g., HackRF One, USRP, BladeRF) to generat
   * RF engineering concepts
   * Lab safety & compliance
 
-## 📡 Supported Frequency Bands
+# 📡 Supported Frequency Bands
 
 | Technology | Frequency Bands (Typical)    |
 | ---------- | ---------------------------- |
@@ -81,14 +81,14 @@ It uses GNU Radio and an SDR device (e.g., HackRF One, USRP, BladeRF) to generat
 
 On Ubuntu/Debian:- 
            bash 
-               sudo apt-get update
+               * sudo apt-get update
 sudo apt-get install gnuradio gr-osmosdr hackrf
 
 
 # Step 2: Connect Hardware :- 
 
-csharp         
-  [Computer/PC]
+csharp
+* [Computer/PC]
       |
       | USB 3.0
       v
@@ -103,3 +103,75 @@ csharp
       |
       v
 [Inside Faraday Cage]
+
+
+# Step 3: Run Example Jammer :-
+  bash
+    python3 jammer.py
+
+* Default: jams GSM900 (900 MHz)
+* Adjust { center_freq, samp_rate, and gain in jammer.py for other bands.}
+
+
+  # Example (inside code):
+     '''
+
+
+     '''
+
+
+## 🧪 Research Workflow
+
+  1. Identify target frequency band
+
+  2. Configure SDR parameters
+
+  3. Generate noise/interference signal
+
+  4.(Optional) Amplify with RF amplifier
+
+  5. Transmit via antenna inside shielded lab
+
+  6. Monitor with spectrum analyzer & mobile devices
+
+  7.Document results (range, effectiveness, side-effects)
+
+  
+
+## 🔒 Safety & Legal Compliance
+
+  * Operate only in RF-shielded labs with proper licenses
+
+  * RF energy can be hazardous—follow lab safety protocols
+
+  * Never operate outdoors or in public spectrum
+
+  * Confirm all experiments with your supervisor
+
+
+## 📚 Useful Resources
+
+   * GNU Radio Tutorials
+   * HackRF One Documentation
+   * USRP Getting Started
+   * Mobile Network Frequency Bands
+
+## 📊 Summary Table
+
+
+| Component         | Purpose                       | Example/Source        |
+| ----------------- | ----------------------------- | --------------------- |
+| SDR Hardware      | Generate RF signals           | HackRF, USRP, BladeRF |
+| RF Amplifier      | Boost signal power            | Mini-Circuits ZHL     |
+| Antenna           | Transmit jamming signal       | Wideband antenna      |
+| GNU Radio         | Signal processing & control   | gnuradio.org          |
+| Spectrum Analyzer | Monitor jamming effectiveness | SDR#, GNU Radio       |
+
+
+## ⚠️ Ethical Note
+
+This project is intended for educational and research purposes only.
+Unauthorized signal jamming is illegal, dangerous, and unethical.
+
+
+  

@@ -2,11 +2,12 @@
 This project is intended strictly for academic research inside licensed RF laboratories with proper shielding (e.g., Faraday cage).
 Using signal jammers outside a controlled environment is illegal and may incur severe penalties. Always follow safety and compliance protocols.
 
-
+---
 # 📌 Overview
 
 This project demonstrates how to create a basic SDR-based mobile signal jammer for controlled lab environments.
 It uses GNU Radio and an SDR device (e.g., HackRF One, USRP, BladeRF) to generate wideband RF noise, which can interfere with 2G/3G/4G/5G mobile signals for testing and research purposes.
+---
 
 ## 🛠 Requirements
   
@@ -74,7 +75,7 @@ It uses GNU Radio and an SDR device (e.g., HackRF One, USRP, BladeRF) to generat
 
 # ⚠️ Note: HackRF One does not support 5G mmWave (>6 GHz).
 
-
+---
 ## 🚀 Setup & Usage
 
 # Step 1: Install Dependencies
@@ -104,6 +105,7 @@ csharp
       v
 [Inside Faraday Cage]
 
+---
 
 # Step 3: Run Example Jammer :-
   bash
@@ -112,6 +114,7 @@ csharp
 * Default: jams GSM900 (900 MHz)
 * Adjust { center_freq, samp_rate, and gain in jammer.py for other bands.}
 
+---
 
   # Example (inside code):
      '''
@@ -119,6 +122,7 @@ csharp
 
      '''
 
+---
 
 ## 🧪 Research Workflow
 
@@ -136,7 +140,7 @@ csharp
 
   7.Document results (range, effectiveness, side-effects)
 
-  
+ --- 
 
 ## 🔒 Safety & Legal Compliance
 
@@ -148,6 +152,7 @@ csharp
 
   * Confirm all experiments with your supervisor
 
+---
 
 ## 📚 Useful Resources
 
@@ -155,6 +160,8 @@ csharp
    * HackRF One Documentation
    * USRP Getting Started
    * Mobile Network Frequency Bands
+
+---
 
 ## 📊 Summary Table
 
@@ -167,11 +174,12 @@ csharp
 | GNU Radio         | Signal processing & control   | gnuradio.org          |
 | Spectrum Analyzer | Monitor jamming effectiveness | SDR#, GNU Radio       |
 
+---
 
 ## ⚠️ Ethical Note
 
 This project is intended for educational and research purposes only.
 Unauthorized signal jamming is illegal, dangerous, and unethical.
 
-
+---
   

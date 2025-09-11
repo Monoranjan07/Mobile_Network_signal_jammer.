@@ -294,13 +294,13 @@ plt.show()
 
   3. Generate noise/interference signal
 
-  4.(Optional) Amplify with RF amplifier
+   4.(Optional) Amplify with RF amplifier
 
   5. Transmit via antenna inside shielded lab
 
   6. Monitor with spectrum analyzer & mobile devices
 
-  7.Document results (range, effectiveness, side-effects)
+   7.Document results (range, effectiveness, side-effects)
 
  --- 
 
